@@ -1,6 +1,6 @@
 import './style.css'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.doom.programowanie.net'
+const API_URL = import.meta.env.VITE_API_URL || window.location.origin
 const WAD_URL = '/wads/doom1.wad'
 const WASM_URL = '/engine/doom.wasm'
 
