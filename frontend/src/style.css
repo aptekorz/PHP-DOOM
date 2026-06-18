@@ -69,86 +69,52 @@ code {
   background: #000;
 }
 
-.topbar {
+.start-panel {
   position: absolute;
   z-index: 10;
-  top: 16px;
-  left: 16px;
-  width: min(560px, calc(100vw - 32px));
+  inset: 0;
+  width: 100%;
+  min-height: 100%;
+  place-content: center;
+  place-items: center;
   display: grid;
-  gap: 14px;
+  gap: 16px;
   padding: 18px;
-  border: 1px solid rgba(255, 209, 102, 0.38);
-  background: rgba(13, 12, 12, 0.88);
-  backdrop-filter: blur(8px);
+  background: #000;
 }
 
-.playing .topbar {
+.playing .start-panel {
   display: none;
 }
 
-h1,
-p {
-  margin: 0;
-}
-
-h1 {
-  font-size: clamp(2rem, 7vw, 4.8rem);
-  line-height: 0.9;
+.start-panel #start-game {
+  min-width: min(320px, calc(100vw - 48px));
+  min-height: 72px;
+  padding: 0 28px;
+  font-size: clamp(1.25rem, 5vw, 2.4rem);
   letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-.lede,
-.keys,
-.legal {
-  color: #c9c0b7;
-}
-
-.api-pill {
-  justify-self: start;
-  border: 1px solid #47413c;
-  color: #ffd166;
-  padding: 8px 12px;
-  white-space: nowrap;
-  text-transform: uppercase;
-  font-weight: 800;
-}
-
-.api-pill.ok {
-  color: #78e08f;
-}
-
-.api-pill.bad {
-  color: #ff6b6b;
-}
-
-.controls {
-  display: grid;
-  grid-template-columns: minmax(160px, 1fr) repeat(3, minmax(112px, auto));
-  gap: 10px;
-  align-items: end;
-}
-
-.controls label {
-  color: #ffd166;
-  font-size: 0.82rem;
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-.messages {
-  display: grid;
-  gap: 8px;
 }
 
 #status {
   color: #78e08f;
+  min-height: 1.4em;
+  margin: 0;
   font-weight: 800;
+  text-align: center;
 }
 
 #status.error {
   color: #ff6b6b;
+}
+
+.start-panel a {
+  color: #ffd166;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.start-panel a:hover {
+  color: #fff;
 }
 
 .game-wrap {
@@ -283,24 +249,6 @@ h1 {
 }
 
 @media (max-width: 760px) {
-  .topbar {
-    inset: 0;
-    width: 100%;
-    min-height: 100dvh;
-    align-content: center;
-    border: 0;
-    padding: 18px;
-  }
-
-  .controls {
-    grid-template-columns: 1fr;
-  }
-
-  .legal,
-  .keys {
-    font-size: 0.9rem;
-  }
-
   #doom-canvas {
     width: 100vw;
     height: auto;

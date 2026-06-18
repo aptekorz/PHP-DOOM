@@ -10,28 +10,10 @@ let startedAt = null
 
 document.querySelector('#app').innerHTML = `
   <main class="shell">
-    <header class="topbar" id="menu-panel">
-      <div>
-        <h1>DOOM in Browser</h1>
-        <p class="lede">Press Start Game. On phones, use the touch controls over the game.</p>
-      </div>
-      <div class="api-pill" id="api-status">API checking...</div>
-
-      <section class="controls" aria-label="Game controls">
-        <label>
-          Nickname
-          <input id="nickname" maxlength="40" autocomplete="nickname" placeholder="Doomguy" />
-        </label>
-        <button id="start-game" type="button">Start Game</button>
-        <button id="fullscreen" type="button">Fullscreen</button>
-        <button id="end-session" type="button" disabled>End Session</button>
-      </section>
-
-      <section class="messages" aria-live="polite">
-        <p id="status">Ready. Press Start Game to load DOOM.</p>
-        <p class="legal">WAD legality: this app does not include the commercial DOOM.WAD. Put a legal shareware <code>doom1.wad</code> in <code>/wads/doom1.wad</code>, or use your own legally obtained WAD.</p>
-        <p class="keys">Desktop: arrows, Ctrl/fire, Space/use, Shift/run. Phone: use the on-screen controls.</p>
-      </section>
+    <header class="start-panel" id="menu-panel">
+      <button id="start-game" type="button">Start Game</button>
+      <a href="https://programowanie.pl" rel="noopener">programowanie.pl</a>
+      <p id="status" aria-live="polite"></p>
     </header>
 
     <section class="game-wrap">
@@ -56,13 +38,9 @@ document.querySelector('#app').innerHTML = `
 `
 
 const els = {
-  apiStatus: document.querySelector('#api-status'),
   canvas: document.querySelector('#doom-canvas'),
-  endSession: document.querySelector('#end-session'),
-  fullscreen: document.querySelector('#fullscreen'),
   gameWrap: document.querySelector('.game-wrap'),
   hudFullscreen: document.querySelector('#hud-fullscreen'),
-  nickname: document.querySelector('#nickname'),
   shell: document.querySelector('.shell'),
   startGame: document.querySelector('#start-game'),
   status: document.querySelector('#status'),
@@ -96,26 +74,20 @@ async function api(path, options = {}) {
 
 async function checkHealth() {
   try {
-    const health = await api('/api/health')
-    els.apiStatus.textContent = `API ${health.status}`
-    els.apiStatus.classList.add('ok')
+    await api('/api/health')
   } catch (error) {
-    els.apiStatus.textContent = 'API offline'
-    els.apiStatus.classList.add('bad')
     setStatus(`Backend is not reachable: ${error.message}`, true)
   }
 }
 
 async function startApiSession() {
-  const nickname = els.nickname.value.trim() || null
   const result = await api('/api/game-session/start', {
     method: 'POST',
-    body: JSON.stringify({ nickname }),
+    body: JSON.stringify({ nickname: null }),
   })
 
   activeSessionUuid = result.data.session_uuid
   startedAt = Date.now()
-  els.endSession.disabled = false
 }
 
 async function endApiSession() {
@@ -125,7 +97,6 @@ async function endApiSession() {
 
   const sessionUuid = activeSessionUuid
   activeSessionUuid = null
-  els.endSession.disabled = true
 
   await api('/api/game-session/end', {
     method: 'POST',
@@ -365,20 +336,6 @@ function escapeHtml(value) {
 }
 
 els.startGame.addEventListener('click', startGame)
-els.endSession.addEventListener('click', async () => {
-  try {
-    await endApiSession()
-    setStatus('Game session ended.')
-  } catch (error) {
-    setStatus(`Could not end session: ${error.message}`, true)
-  }
-})
-
-els.fullscreen.addEventListener('click', async () => {
-  await enterFullscreen()
-  els.canvas.focus()
-})
-
 els.hudFullscreen.addEventListener('click', async () => {
   await enterFullscreen()
   els.canvas.focus()
