@@ -10,46 +10,47 @@ let startedAt = null
 
 document.querySelector('#app').innerHTML = `
   <main class="shell">
-    <header class="topbar">
+    <header class="topbar" id="menu-panel">
       <div>
         <h1>DOOM in Browser</h1>
-        <p class="lede">WebAssembly DOOM running directly in the browser.</p>
+        <p class="lede">Press Start Game. On phones, use the touch controls over the game.</p>
       </div>
       <div class="api-pill" id="api-status">API checking...</div>
+
+      <section class="controls" aria-label="Game controls">
+        <label>
+          Nickname
+          <input id="nickname" maxlength="40" autocomplete="nickname" placeholder="Doomguy" />
+        </label>
+        <button id="start-game" type="button">Start Game</button>
+        <button id="fullscreen" type="button">Fullscreen</button>
+        <button id="end-session" type="button" disabled>End Session</button>
+      </section>
+
+      <section class="messages" aria-live="polite">
+        <p id="status">Ready. Press Start Game to load DOOM.</p>
+        <p class="legal">WAD legality: this app does not include the commercial DOOM.WAD. Put a legal shareware <code>doom1.wad</code> in <code>/wads/doom1.wad</code>, or use your own legally obtained WAD.</p>
+        <p class="keys">Desktop: arrows, Ctrl/fire, Space/use, Shift/run. Phone: use the on-screen controls.</p>
+      </section>
     </header>
-
-    <section class="controls" aria-label="Game controls">
-      <label>
-        Nickname
-        <input id="nickname" maxlength="40" autocomplete="nickname" placeholder="Doomguy" />
-      </label>
-      <button id="start-game" type="button">Start Game</button>
-      <button id="fullscreen" type="button">Fullscreen</button>
-      <button id="end-session" type="button" disabled>End Session</button>
-    </section>
-
-    <section class="messages" aria-live="polite">
-      <p id="status">Ready. Press Start Game to load DOOM.</p>
-      <p class="legal">WAD legality: this app does not include the commercial DOOM.WAD. Put a legal shareware <code>doom1.wad</code> in <code>/wads/doom1.wad</code>, or use your own legally obtained WAD.</p>
-      <p class="keys">Controls: arrows move/turn, Ctrl or mouse click fires, Space uses doors, Shift runs, Alt strafes, 1-7 weapons, Esc menu. Click the canvas to focus keyboard input.</p>
-    </section>
 
     <section class="game-wrap">
       <canvas id="doom-canvas" tabindex="0" aria-label="DOOM game canvas"></canvas>
-    </section>
-
-    <section class="leaderboard">
-      <div>
-        <h2>Leaderboard</h2>
-        <ol id="leaderboard-list" class="leaderboard-list"></ol>
+      <div class="touch-controls" aria-label="Touch controls">
+        <div class="dpad">
+          <button class="touch-btn up" type="button" data-key="ArrowUp" aria-label="Forward">▲</button>
+          <button class="touch-btn left" type="button" data-key="ArrowLeft" aria-label="Turn left">◀</button>
+          <button class="touch-btn right" type="button" data-key="ArrowRight" aria-label="Turn right">▶</button>
+          <button class="touch-btn down" type="button" data-key="ArrowDown" aria-label="Back">▼</button>
+        </div>
+        <div class="action-pad">
+          <button class="touch-btn action fire" type="button" data-key="Control" aria-label="Fire">Fire</button>
+          <button class="touch-btn action" type="button" data-key=" " aria-label="Use">Use</button>
+          <button class="touch-btn action" type="button" data-key="Shift" aria-label="Run">Run</button>
+          <button class="touch-btn action" type="button" data-key="Escape" aria-label="Menu">Menu</button>
+        </div>
       </div>
-      <form id="score-form" class="score-form">
-        <h2>Submit Score</h2>
-        <input id="score-nickname" maxlength="40" placeholder="Nickname" required />
-        <input id="score" type="number" min="0" max="999999999" placeholder="Score" required />
-        <input id="level" maxlength="80" placeholder="Level, e.g. E1M1" />
-        <button type="submit">Save Score</button>
-      </form>
+      <button class="hud-fullscreen" id="hud-fullscreen" type="button" aria-label="Fullscreen">Fullscreen</button>
     </section>
   </main>
 `
@@ -59,11 +60,13 @@ const els = {
   canvas: document.querySelector('#doom-canvas'),
   endSession: document.querySelector('#end-session'),
   fullscreen: document.querySelector('#fullscreen'),
-  leaderboardList: document.querySelector('#leaderboard-list'),
+  gameWrap: document.querySelector('.game-wrap'),
+  hudFullscreen: document.querySelector('#hud-fullscreen'),
   nickname: document.querySelector('#nickname'),
-  scoreForm: document.querySelector('#score-form'),
+  shell: document.querySelector('.shell'),
   startGame: document.querySelector('#start-game'),
   status: document.querySelector('#status'),
+  touchButtons: document.querySelectorAll('.touch-btn'),
 }
 
 function setStatus(message, isError = false) {
@@ -100,24 +103,6 @@ async function checkHealth() {
     els.apiStatus.textContent = 'API offline'
     els.apiStatus.classList.add('bad')
     setStatus(`Backend is not reachable: ${error.message}`, true)
-  }
-}
-
-async function loadLeaderboard() {
-  try {
-    const result = await api('/api/leaderboard')
-    const entries = result.data || []
-    els.leaderboardList.innerHTML = entries.length
-      ? entries.map((entry) => `
-          <li>
-            <span>${escapeHtml(entry.nickname)}</span>
-            <strong>${entry.score}</strong>
-            <small>${escapeHtml(entry.level || 'unknown level')}</small>
-          </li>
-        `).join('')
-      : '<li class="empty">No scores yet.</li>'
-  } catch (error) {
-    els.leaderboardList.innerHTML = `<li class="empty">Leaderboard unavailable: ${escapeHtml(error.message)}</li>`
   }
 }
 
@@ -172,13 +157,16 @@ async function loadWadIfPresent() {
 async function startGame() {
   if (doom) {
     els.canvas.focus()
+    await enterFullscreen()
     return
   }
 
   els.startGame.disabled = true
+  els.shell.classList.add('playing')
   setStatus('Starting API session...')
 
   try {
+    await enterFullscreen()
     await startApiSession()
     setStatus('Loading WAD and WebAssembly engine...')
 
@@ -191,7 +179,20 @@ async function startGame() {
     els.canvas.focus()
   } catch (error) {
     els.startGame.disabled = false
+    els.shell.classList.remove('playing')
     setStatus(`Could not start DOOM: ${error.message}`, true)
+  }
+}
+
+async function enterFullscreen() {
+  if (document.fullscreenElement || !els.gameWrap.requestFullscreen) {
+    return
+  }
+
+  try {
+    await els.gameWrap.requestFullscreen()
+  } catch {
+    // Mobile Safari may reject fullscreen; CSS still keeps the game full-window.
   }
 }
 
@@ -334,6 +335,18 @@ async function loadDoomGame(canvas, wadBytes) {
   animationTimer = window.setInterval(exports.tickGame, 1000 / 35)
 
   return {
+    pressKey(key) {
+      const doomKey = keyValue(key)
+      if (doomKey !== null) {
+        exports.reportKeyDown(doomKey)
+      }
+    },
+    releaseKey(key) {
+      const doomKey = keyValue(key)
+      if (doomKey !== null) {
+        exports.reportKeyUp(doomKey)
+      }
+    },
     stop() {
       window.clearInterval(animationTimer)
       canvas.removeEventListener('keydown', keyDown)
@@ -362,35 +375,33 @@ els.endSession.addEventListener('click', async () => {
 })
 
 els.fullscreen.addEventListener('click', async () => {
-  try {
-    await document.querySelector('.game-wrap').requestFullscreen()
-    els.canvas.focus()
-  } catch (error) {
-    setStatus(`Fullscreen failed: ${error.message}`, true)
-  }
+  await enterFullscreen()
+  els.canvas.focus()
 })
 
-els.scoreForm.addEventListener('submit', async (event) => {
-  event.preventDefault()
+els.hudFullscreen.addEventListener('click', async () => {
+  await enterFullscreen()
+  els.canvas.focus()
+})
 
-  const duration = startedAt ? Math.max(0, Math.round((Date.now() - startedAt) / 1000)) : null
+els.touchButtons.forEach((button) => {
+  const key = button.dataset.key
 
-  try {
-    await api('/api/leaderboard', {
-      method: 'POST',
-      body: JSON.stringify({
-        nickname: document.querySelector('#score-nickname').value.trim(),
-        score: Number(document.querySelector('#score').value),
-        level: document.querySelector('#level').value.trim() || null,
-        duration_seconds: duration,
-      }),
-    })
-    event.currentTarget.reset()
-    setStatus('Score saved.')
-    await loadLeaderboard()
-  } catch (error) {
-    setStatus(`Could not save score: ${error.message}`, true)
+  const press = (event) => {
+    event.preventDefault()
+    els.canvas.focus()
+    doom?.pressKey(key)
   }
+
+  const release = (event) => {
+    event.preventDefault()
+    doom?.releaseKey(key)
+  }
+
+  button.addEventListener('pointerdown', press)
+  button.addEventListener('pointerup', release)
+  button.addEventListener('pointercancel', release)
+  button.addEventListener('pointerleave', release)
 })
 
 window.addEventListener('beforeunload', () => {
@@ -403,4 +414,3 @@ window.addEventListener('beforeunload', () => {
 })
 
 checkHealth()
-loadLeaderboard()

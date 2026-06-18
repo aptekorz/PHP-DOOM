@@ -1,9 +1,9 @@
 :root {
   color: #f4f1e8;
-  background: #0c0c0d;
+  background: #000;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-synthesis: none;
-  line-height: 1.5;
+  line-height: 1.4;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -13,14 +13,14 @@
   box-sizing: border-box;
 }
 
-body {
+html,
+body,
+#app {
+  width: 100%;
+  height: 100%;
   margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  background:
-    linear-gradient(180deg, rgba(116, 12, 12, 0.42), transparent 36rem),
-    radial-gradient(circle at 30% 0%, rgba(236, 170, 62, 0.16), transparent 30rem),
-    #0c0c0d;
+  overflow: hidden;
+  background: #000;
 }
 
 button,
@@ -36,6 +36,7 @@ button {
   font-weight: 800;
   text-transform: uppercase;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 button:hover:not(:disabled) {
@@ -61,47 +62,40 @@ code {
 }
 
 .shell {
-  width: min(1480px, 100%);
-  min-height: 100vh;
-  margin: 0 auto;
-  padding: 18px;
+  position: fixed;
+  inset: 0;
   display: grid;
-  grid-template-rows: auto auto auto minmax(320px, 1fr) auto;
-  gap: 14px;
-}
-
-.topbar,
-.controls,
-.messages,
-.leaderboard {
-  border: 1px solid #2d2927;
-  background: rgba(13, 12, 12, 0.86);
+  place-items: stretch;
+  background: #000;
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
-  align-items: center;
+  position: absolute;
+  z-index: 10;
+  top: 16px;
+  left: 16px;
+  width: min(560px, calc(100vw - 32px));
+  display: grid;
+  gap: 14px;
   padding: 18px;
+  border: 1px solid rgba(255, 209, 102, 0.38);
+  background: rgba(13, 12, 12, 0.88);
+  backdrop-filter: blur(8px);
+}
+
+.playing .topbar {
+  display: none;
 }
 
 h1,
-h2,
 p {
   margin: 0;
 }
 
 h1 {
-  font-size: clamp(2rem, 5vw, 4.4rem);
-  line-height: 0.95;
+  font-size: clamp(2rem, 7vw, 4.8rem);
+  line-height: 0.9;
   letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-h2 {
-  color: #ffd166;
-  font-size: 1rem;
   text-transform: uppercase;
 }
 
@@ -112,6 +106,7 @@ h2 {
 }
 
 .api-pill {
+  justify-self: start;
   border: 1px solid #47413c;
   color: #ffd166;
   padding: 8px 12px;
@@ -130,10 +125,9 @@ h2 {
 
 .controls {
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) repeat(3, minmax(130px, auto));
+  grid-template-columns: minmax(160px, 1fr) repeat(3, minmax(112px, auto));
   gap: 10px;
   align-items: end;
-  padding: 12px;
 }
 
 .controls label {
@@ -146,7 +140,6 @@ h2 {
 .messages {
   display: grid;
   gap: 8px;
-  padding: 12px;
 }
 
 #status {
@@ -159,93 +152,193 @@ h2 {
 }
 
 .game-wrap {
-  min-height: 0;
+  position: fixed;
+  inset: 0;
   display: grid;
   place-items: center;
-  border: 1px solid #4d1716;
-  background: #050505;
+  background: #000;
   overflow: hidden;
 }
 
 .game-wrap:fullscreen {
   width: 100vw;
   height: 100vh;
-  background: #000;
 }
 
 #doom-canvas {
-  width: min(100%, calc((100vh - 280px) * 1.333));
+  width: min(100vw, 133.333vh);
   height: auto;
-  max-height: 100%;
+  max-width: 100vw;
+  max-height: 100vh;
   image-rendering: pixelated;
   outline: none;
   background: #000;
 }
 
 #doom-canvas:focus {
-  box-shadow: 0 0 0 3px #ffd166;
+  box-shadow: inset 0 0 0 2px rgba(255, 209, 102, 0.8);
 }
 
-.game-wrap:fullscreen #doom-canvas {
-  width: min(100vw, 133.33vh);
-  height: auto;
+.hud-fullscreen,
+.touch-controls {
+  display: none;
 }
 
-.leaderboard {
+.playing .hud-fullscreen {
+  position: absolute;
+  z-index: 8;
+  top: max(10px, env(safe-area-inset-top));
+  right: max(10px, env(safe-area-inset-right));
+  display: block;
+  min-height: 38px;
+  padding: 0 12px;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(0, 0, 0, 0.58);
+  color: #fff;
+  font-size: 0.75rem;
+}
+
+.touch-controls {
+  pointer-events: none;
+  user-select: none;
+}
+
+.touch-btn {
+  pointer-events: auto;
+  min-width: 62px;
+  min-height: 62px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(189, 46, 40, 0.68);
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-btn:active {
+  transform: translateY(1px) scale(0.98);
+  background: rgba(224, 67, 56, 0.9);
+}
+
+.dpad {
+  position: absolute;
+  z-index: 8;
+  left: max(14px, env(safe-area-inset-left));
+  bottom: max(18px, env(safe-area-inset-bottom));
+  width: 190px;
+  height: 190px;
+}
+
+.dpad .touch-btn {
+  position: absolute;
+}
+
+.dpad .up {
+  top: 0;
+  left: 64px;
+}
+
+.dpad .left {
+  top: 64px;
+  left: 0;
+}
+
+.dpad .right {
+  top: 64px;
+  right: 0;
+}
+
+.dpad .down {
+  bottom: 0;
+  left: 64px;
+}
+
+.action-pad {
+  position: absolute;
+  z-index: 8;
+  right: max(14px, env(safe-area-inset-right));
+  bottom: max(18px, env(safe-area-inset-bottom));
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 360px);
-  gap: 18px;
-  padding: 14px;
-}
-
-.leaderboard-list {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 6px;
-}
-
-.leaderboard-list li {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: repeat(2, minmax(74px, auto));
   gap: 12px;
-  align-items: center;
-  border-bottom: 1px solid #2d2927;
-  padding: 6px 0;
+  align-items: end;
 }
 
-.leaderboard-list strong {
-  color: #ffd166;
+.action {
+  min-width: 76px;
+  padding: 0 12px;
+  font-size: 0.78rem;
 }
 
-.leaderboard-list small,
-.empty {
-  color: #9d948b;
+.fire {
+  min-width: 96px;
+  min-height: 96px;
+  grid-row: span 2;
 }
 
-.score-form {
-  display: grid;
-  gap: 8px;
+@media (hover: none), (pointer: coarse), (max-width: 920px) {
+  .playing .touch-controls {
+    display: block;
+  }
 }
 
-@media (max-width: 860px) {
-  .topbar,
-  .controls,
-  .leaderboard {
+@media (max-width: 760px) {
+  .topbar {
+    inset: 0;
+    width: 100%;
+    min-height: 100dvh;
+    align-content: center;
+    border: 0;
+    padding: 18px;
+  }
+
+  .controls {
     grid-template-columns: 1fr;
   }
 
-  .topbar {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .shell {
-    padding: 10px;
+  .legal,
+  .keys {
+    font-size: 0.9rem;
   }
 
   #doom-canvas {
-    width: 100%;
+    width: 100vw;
+    height: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .dpad {
+    width: 154px;
+    height: 154px;
+  }
+
+  .touch-btn {
+    min-width: 52px;
+    min-height: 52px;
+  }
+
+  .dpad .up,
+  .dpad .down {
+    left: 51px;
+  }
+
+  .dpad .left,
+  .dpad .right {
+    top: 51px;
+  }
+
+  .action-pad {
+    gap: 8px;
+  }
+
+  .action {
+    min-width: 64px;
+    min-height: 52px;
+  }
+
+  .fire {
+    min-width: 80px;
+    min-height: 80px;
   }
 }
