@@ -161,6 +161,11 @@ async function loadWadIfPresent() {
     return null
   }
 
+  const wadHeader = new TextDecoder('ascii').decode(bytes.slice(0, 4))
+  if (!['IWAD', 'PWAD'].includes(wadHeader)) {
+    return null
+  }
+
   return bytes
 }
 
